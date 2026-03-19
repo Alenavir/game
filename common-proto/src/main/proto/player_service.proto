@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+package playerservice.player;
+
+option java_package = "ru.alenavir.playerservice.grpc";
+option java_outer_classname = "PlayerServiceProto";
+
+// DTO игрока
+message PlayerInfo {
+  int64 id = 1;
+  string name = 2;
+  int64 current_game_id = 3;
+}
+
+// Для создания игрока
+message CreatePlayerRequest {
+  string name = 1;
+}
+
+message CreatePlayerResponse {
+  PlayerInfo player = 1;
+}
+
+// Для получения игрока
+message GetPlayerInfoRequest {
+  int64 player_id = 1;
+}
+
+message GetPlayerInfoResponse {
+  PlayerInfo player = 1;
+}
+
+// Для присвоения игры
+message AssignToGameRequest {
+  int64 player_id = 1;
+  int64 game_id = 2;
+}
+
+message AssignToGameResponse {
+  PlayerInfo player = 1;
+}
+
+// gRPC сервис
+service PlayerService {
+  rpc CreatePlayer(CreatePlayerRequest) returns (CreatePlayerResponse);
+  rpc GetPlayerInfo(GetPlayerInfoRequest) returns (GetPlayerInfoResponse);
+  rpc AssignToGame(AssignToGameRequest) returns (AssignToGameResponse);
+}

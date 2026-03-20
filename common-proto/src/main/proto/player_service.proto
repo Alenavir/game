@@ -12,7 +12,7 @@ message PlayerInfo {
   int64 current_game_id = 3;
 }
 
-// Для создания игрока
+// создать игрока
 message CreatePlayerRequest {
   string name = 1;
 }
@@ -21,7 +21,7 @@ message CreatePlayerResponse {
   PlayerInfo player = 1;
 }
 
-// Для получения игрока
+// получить игрока
 message GetPlayerInfoRequest {
   int64 player_id = 1;
 }
@@ -30,19 +30,18 @@ message GetPlayerInfoResponse {
   PlayerInfo player = 1;
 }
 
-// Для присвоения игры
-message AssignToGameRequest {
+// существует ли игрок
+message HasPlayerRequest {
   int64 player_id = 1;
-  int64 game_id = 2;
 }
 
-message AssignToGameResponse {
-  PlayerInfo player = 1;
+message HasPlayerResponse {
+  bool exists = 1;
 }
 
 // gRPC сервис
 service PlayerService {
   rpc CreatePlayer(CreatePlayerRequest) returns (CreatePlayerResponse);
   rpc GetPlayerInfo(GetPlayerInfoRequest) returns (GetPlayerInfoResponse);
-  rpc AssignToGame(AssignToGameRequest) returns (AssignToGameResponse);
+  rpc HasPlayer(HasPlayerRequest) returns (HasPlayerResponse);
 }

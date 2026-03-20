@@ -11,11 +11,11 @@ public class PlayerClient {
 
     private final PlayerServiceGrpc.PlayerServiceBlockingStub stub;
 
-    public PlayerServiceProto.PlayerInfo getPlayer(Long playerId) {
-        return stub.getPlayerInfo(
-                PlayerServiceProto.GetPlayerInfoRequest.newBuilder()
+    public boolean hasPlayer(Long playerId) {
+        return stub.hasPlayer(
+                PlayerServiceProto.HasPlayerRequest.newBuilder()
                         .setPlayerId(playerId)
                         .build()
-        ).getPlayer();
+        ).getExists();
     }
 }

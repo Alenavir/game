@@ -4,6 +4,7 @@ import io.grpc.stub.StreamObserver;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import ru.alenavir.gameservice.dto.GameInfoDto;
 import ru.alenavir.gameservice.service.GameService;
 
 @Component
@@ -14,13 +15,13 @@ public class GameGrpcService extends GameServiceGrpc.GameServiceImplBase {
     private final GameService gameService;
 
     @Override
-    public void createGame(GameProto.CreateGameRequest request,
-                           StreamObserver<GameProto.CreateGameResponse> responseObserver) {
+    public void createGame(GameServiceProto.CreateGameRequest request,
+                           StreamObserver<GameServiceProto.CreateGameResponse> responseObserver) {
 
         Long gameId = gameService.createGame(request.getPlayerId());
 
         responseObserver.onNext(
-                GameProto.CreateGameResponse.newBuilder()
+                GameServiceProto.CreateGameResponse.newBuilder()
                         .setGameId(gameId)
                         .build()
         );
@@ -28,22 +29,52 @@ public class GameGrpcService extends GameServiceGrpc.GameServiceImplBase {
     }
 
     @Override
-    public void joinGame(GameProto.JoinGameRequest request,
-                         StreamObserver<GameProto.JoinGameResponse> responseObserver) {
+    public void joinGame(GameServiceProto.JoinGameRequest request,
+                         StreamObserver<GameServiceProto.JoinGameResponse> responseObserver) {
 
         gameService.joinGame(request.getPlayerId(), request.getGameId());
 
-        responseObserver.onNext(GameProto.JoinGameResponse.newBuilder().build());
+        responseObserver.onNext(GameServiceProto.JoinGameResponse.newBuilder().build());
         responseObserver.onCompleted();
     }
 
     @Override
-    public void startGame(GameProto.StartGameRequest request,
-                          StreamObserver<GameProto.StartGameResponse> responseObserver) {
+    public void leaveGame(GameServiceProto.LeaveGameRequest request,
+                          StreamObserver<GameServiceProto.LeaveGameResponse> responseObserver) {
+
+        gameService.leaveGame(request.getPlayerId(), request.getGameId());
+
+        responseObserver.onNext(GameServiceProto.LeaveGameResponse.newBuilder().build());
+        responseObserver.onCompleted();
+    }
+
+    @Override
+    public void startGame(GameServiceProto.StartGameRequest request,
+                          StreamObserver<GameServiceProto.StartGameResponse> responseObserver) {
 
         gameService.startGame(request.getGameId());
 
-        responseObserver.onNext(GameProto.StartGameResponse.newBuilder().build());
+        responseObserver.onNext(GameServiceProto.StartGameResponse.newBuilder().build());
+        responseObserver.onCompleted();
+    }
+
+    @Override
+    public void getGame(GameServiceProto.GetGameRequest request,
+                        StreamObserver<GameServiceProto.GetGameResponse> responseObserver) {
+
+        GameInfoDto gameInfo = gameService.getGameInfo(request.getGameId());
+
+        GameServiceProto.GameInfo protoGameInfo = GameServiceProto.GameInfo.newBuilder()
+                .setId(gameInfo.getId())
+                .setState(GameServiceProto.GameState.valueOf(gameInfo.getState().name()))
+                .addAllPlayerIds(gameInfo.getPlayerIds())
+                .build();
+
+        responseObserver.onNext(
+                GameServiceProto.GetGameResponse.newBuilder()
+                        .setGame(protoGameInfo)
+                        .build()
+        );
         responseObserver.onCompleted();
     }
 }

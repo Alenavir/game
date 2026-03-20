@@ -3,13 +3,13 @@ syntax = "proto3";
 package gameservice.game;
 
 option java_package = "ru.alenavir.gameservice.grpc";
-option java_outer_classname = "GameProto";
+option java_outer_classname = "GameServiceProto";
 
 // Состояние игры
 enum GameState {
-  WAITING = 0;
-  RUNNING = 1;
-  FINISHED = 2;
+  WAITING = 0;   // Игра создана, ждёт игроков
+  RUNNING = 1;   // Игра идёт
+  FINISHED = 2;  // Игра завершена
 }
 
 // DTO игры
@@ -19,22 +19,16 @@ message GameInfo {
   repeated int64 player_ids = 3;
 }
 
-// =====================
-// CREATE GAME
-// =====================
-
+// создание игры
 message CreateGameRequest {
-  int64 player_id = 1;
+  int64 player_id = 1; // Создатель матча
 }
 
 message CreateGameResponse {
   int64 game_id = 1;
 }
 
-// =====================
-// JOIN GAME
-// =====================
-
+// присоед. к игре
 message JoinGameRequest {
   int64 player_id = 1;
   int64 game_id = 2;
@@ -43,10 +37,16 @@ message JoinGameRequest {
 message JoinGameResponse {
 }
 
-// =====================
-// START GAME
-// =====================
+// покинуть игру
+message LeaveGameRequest {
+  int64 player_id = 1;
+  int64 game_id = 2;
+}
 
+message LeaveGameResponse {
+}
+
+// начать игру
 message StartGameRequest {
   int64 game_id = 1;
 }
@@ -54,10 +54,7 @@ message StartGameRequest {
 message StartGameResponse {
 }
 
-// =====================
-// OPTIONAL (очень полезно)
-// =====================
-
+ // получить инфу об игре
 message GetGameRequest {
   int64 game_id = 1;
 }
@@ -66,15 +63,11 @@ message GetGameResponse {
   GameInfo game = 1;
 }
 
-// =====================
 // gRPC сервис
-// =====================
-
 service GameService {
   rpc CreateGame(CreateGameRequest) returns (CreateGameResponse);
   rpc JoinGame(JoinGameRequest) returns (JoinGameResponse);
+  rpc LeaveGame(LeaveGameRequest) returns (LeaveGameResponse);
   rpc StartGame(StartGameRequest) returns (StartGameResponse);
-
-  // полезно для тестов и UI
   rpc GetGame(GetGameRequest) returns (GetGameResponse);
 }

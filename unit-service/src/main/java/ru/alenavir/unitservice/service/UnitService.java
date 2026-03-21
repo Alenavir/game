@@ -1,5 +1,6 @@
 package ru.alenavir.unitservice.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.grpc.StatusRuntimeException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -7,14 +8,19 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.alenavir.unitservice.dto.CreatedUnitDto;
 import ru.alenavir.unitservice.dto.UnitInfoDto;
+import ru.alenavir.unitservice.dto.events.UnitCreatedEvent;
+import ru.alenavir.unitservice.dto.events.UnitMovedEvent;
+import ru.alenavir.unitservice.entity.OutboxEvent;
 import ru.alenavir.unitservice.entity.Position;
 import ru.alenavir.unitservice.entity.Unit;
+import ru.alenavir.unitservice.entity.enums.EventType;
 import ru.alenavir.unitservice.exceptions.BadRequestException;
 import ru.alenavir.unitservice.exceptions.NotFoundException;
 import ru.alenavir.unitservice.factory.UnitFactory;
 import ru.alenavir.unitservice.grpc.client.GameClient;
 import ru.alenavir.unitservice.grpc.client.PlayerClient;
 import ru.alenavir.unitservice.mapper.UnitMapper;
+import ru.alenavir.unitservice.repo.OutboxRepo;
 import ru.alenavir.unitservice.repo.UnitRepo;
 
 @Service
@@ -25,7 +31,9 @@ public class UnitService {
     private final UnitRepo repo;
     private final PlayerClient playerClient;
     private final GameClient gameClient;
+    private final OutboxRepo outboxRepo;
     private final UnitMapper mapper;
+    private final ObjectMapper objectMapper;
 
     public UnitInfoDto createUnit(CreatedUnitDto unitDto) {
         validatePlayer(unitDto.getOwnerId());
@@ -42,6 +50,26 @@ public class UnitService {
         );
 
         Unit savedUnit = repo.save(unit);
+
+        UnitCreatedEvent eventDto = new UnitCreatedEvent(
+                unit.getId(), unit.getGameId(), unit.getOwnerId(), unit.getType(),
+                unit.getPosition().getX(), unit.getPosition().getY(), unit.getHealth()
+        );
+
+        String payload;
+        try {
+            payload = objectMapper.writeValueAsString(eventDto);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
+        OutboxEvent event = new OutboxEvent();
+        event.setAggregateType("UNIT");
+        event.setAggregateId(unit.getId().toString());
+        event.setEventType(EventType.UNIT_CREATED);
+        event.setPayload(payload);
+
+        outboxRepo.save(event);
 
         log.info("Создан юнит {} типа {} для игрока {} в игре {}",
                 savedUnit.getId(),
@@ -74,6 +102,28 @@ public class UnitService {
         validatePosition(newPosition);
 
         unit.setPosition(newPosition);
+
+        repo.save(unit);
+
+        UnitMovedEvent eventDto = new UnitMovedEvent(
+                unit.getGameId(), unit.getId(),
+                unit.getPosition().getX(), unit.getPosition().getY()
+        );
+
+        String payload;
+        try {
+            payload = objectMapper.writeValueAsString(eventDto);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
+        OutboxEvent event = new OutboxEvent();
+        event.setAggregateType("UNIT");
+        event.setAggregateId(unit.getId().toString());
+        event.setEventType(EventType.UNIT_MOVED);
+        event.setPayload(payload);
+
+        outboxRepo.save(event);
 
         log.info("Юнит {} перемещён игроком {} с ({}, {}) на ({}, {})",
                 unit.getId(),

@@ -3,11 +3,12 @@ package ru.alenavir.gameservice.grpc;
 import io.grpc.stub.StreamObserver;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
+import net.devh.boot.grpc.server.service.GrpcService;
 import ru.alenavir.gameservice.dto.GameInfoDto;
 import ru.alenavir.gameservice.service.GameService;
+import ru.alenavir.playerservice.grpc.PlayerServiceProto;
 
-@Component
+@GrpcService
 @RequiredArgsConstructor
 @Slf4j
 public class GameGrpcService extends GameServiceGrpc.GameServiceImplBase {
@@ -75,6 +76,20 @@ public class GameGrpcService extends GameServiceGrpc.GameServiceImplBase {
                         .setGame(protoGameInfo)
                         .build()
         );
+        responseObserver.onCompleted();
+    }
+
+    @Override
+    public void isGameRunning(GameServiceProto.IsGameRunningRequest request,
+                          StreamObserver<GameServiceProto.IsGameRunningResponse> responseObserver) {
+
+        boolean exists = gameService.isGameRunning(request.getGameId());
+
+        GameServiceProto.IsGameRunningResponse response = GameServiceProto.IsGameRunningResponse.newBuilder()
+                .setExists(exists)
+                .build();
+
+        responseObserver.onNext(response);
         responseObserver.onCompleted();
     }
 }

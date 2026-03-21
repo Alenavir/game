@@ -39,9 +39,19 @@ message HasPlayerResponse {
   bool exists = 1;
 }
 
+// в игре ли игрок
+message HasCurrentGameRequest {
+  int64 player_id = 1;
+}
+
+message HasCurrentGameResponse {
+  bool exists = 1;
+}
+
 // gRPC сервис
 service PlayerService {
   rpc CreatePlayer(CreatePlayerRequest) returns (CreatePlayerResponse);
   rpc GetPlayerInfo(GetPlayerInfoRequest) returns (GetPlayerInfoResponse);
   rpc HasPlayer(HasPlayerRequest) returns (HasPlayerResponse);
+  rpc HasCurrentGame(HasCurrentGameRequest) returns (HasCurrentGameResponse);
 }

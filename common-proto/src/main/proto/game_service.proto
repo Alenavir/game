@@ -54,13 +54,22 @@ message StartGameRequest {
 message StartGameResponse {
 }
 
- // получить инфу об игре
+// получить инфу об игре
 message GetGameRequest {
   int64 game_id = 1;
 }
 
 message GetGameResponse {
   GameInfo game = 1;
+}
+
+// Игра в активном состоянии
+message IsGameRunningRequest {
+  int64 game_id = 1;
+}
+
+message IsGameRunningResponse {
+  bool exists = 1;
 }
 
 // gRPC сервис
@@ -70,4 +79,5 @@ service GameService {
   rpc LeaveGame(LeaveGameRequest) returns (LeaveGameResponse);
   rpc StartGame(StartGameRequest) returns (StartGameResponse);
   rpc GetGame(GetGameRequest) returns (GetGameResponse);
+  rpc isGameRunning(IsGameRunningRequest) returns (IsGameRunningResponse);
 }

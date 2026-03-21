@@ -173,6 +173,10 @@ public class GameService {
         return mapper.toDto(found);
     }
 
+    public boolean isGameRunning(Long gameId) {
+        return gameRepo.existsByIdAndState(gameId, GameState.RUNNING);
+    }
+
     private void validatePlayer(Long playerId) {
         try {
             playerClient.hasPlayer(playerId);

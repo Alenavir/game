@@ -26,8 +26,8 @@ public class GrpcExceptionInterceptor implements ServerInterceptor {
                     call.close(mapStatus(e), new Metadata());
                 } catch (Exception e) {
                     call.close(
-                            Status.INTERNAL.withDescription("Internal error"),
-                            new Metadata()
+                        Status.INTERNAL.withDescription("Internal error"),
+                        new Metadata()
                     );
                 }
             }

@@ -1,9 +1,9 @@
 package ru.alenavir.unitservice.service.kafka.topic;
 
 
-import ru.alenavir.unitservice.entity.enums.EventType;
+import java.util.List;
 
 public interface EventRoutingStrategy {
-    boolean supports(EventType eventType); // проверка, подходит ли стратегия для события
-    String getTopic(); // топик, куда отправлять
+    boolean supports(String eventType);
+    List<String> getTopics();
 }

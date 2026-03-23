@@ -8,8 +8,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.alenavir.unitservice.dto.CreatedUnitDto;
 import ru.alenavir.unitservice.dto.UnitInfoDto;
-import ru.alenavir.unitservice.dto.events.UnitCreatedEvent;
-import ru.alenavir.unitservice.dto.events.UnitMovedEvent;
+import ru.alenavir.unitservice.dto.events.unit.UnitCreatedEvent;
+import ru.alenavir.unitservice.dto.events.unit.UnitMovedEvent;
+import ru.alenavir.unitservice.dto.events.unit.enums.UnitEventType;
 import ru.alenavir.unitservice.entity.OutboxEvent;
 import ru.alenavir.unitservice.entity.Position;
 import ru.alenavir.unitservice.entity.Unit;
@@ -35,6 +36,7 @@ public class UnitService {
     private final UnitMapper mapper;
     private final ObjectMapper objectMapper;
 
+    @Transactional
     public UnitInfoDto createUnit(CreatedUnitDto unitDto) {
         validatePlayer(unitDto.getOwnerId());
         validateGame(unitDto.getGameId());
@@ -66,7 +68,7 @@ public class UnitService {
         OutboxEvent event = new OutboxEvent();
         event.setAggregateType("UNIT");
         event.setAggregateId(unit.getId().toString());
-        event.setEventType(EventType.UNIT_CREATED);
+        event.setEventType(UnitEventType.UNIT_CREATED.name());
         event.setPayload(payload);
 
         outboxRepo.save(event);
@@ -120,7 +122,7 @@ public class UnitService {
         OutboxEvent event = new OutboxEvent();
         event.setAggregateType("UNIT");
         event.setAggregateId(unit.getId().toString());
-        event.setEventType(EventType.UNIT_MOVED);
+        event.setEventType(UnitEventType.UNIT_MOVED.name());
         event.setPayload(payload);
 
         outboxRepo.save(event);

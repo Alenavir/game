@@ -6,7 +6,6 @@ import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.server.service.GrpcService;
 import ru.alenavir.gameservice.dto.GameInfoDto;
 import ru.alenavir.gameservice.service.GameService;
-import ru.alenavir.playerservice.grpc.PlayerServiceProto;
 
 @GrpcService
 @RequiredArgsConstructor

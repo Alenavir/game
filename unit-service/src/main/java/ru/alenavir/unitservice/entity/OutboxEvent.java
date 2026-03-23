@@ -20,8 +20,7 @@ public class OutboxEvent {
     private String aggregateType; // e.g. "UNIT"
     private String aggregateId;   // id юнита
 
-    @Enumerated(EnumType.STRING)
-    private EventType eventType;     // e.g. "UNIT_CREATED"
+    private String eventType;     // e.g. "UNIT_CREATED"
 
     @Column(columnDefinition = "CLOB")
     private String payload;       // JSON с данными

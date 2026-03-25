@@ -5,7 +5,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import ru.alenavir.gameservice.dto.events.AggregateType;
-import ru.alenavir.gameservice.dto.events.game.enums.GameEventType;
 import ru.alenavir.gameservice.dto.events.player.enums.PlayerEventType;
 import ru.alenavir.gameservice.entity.OutboxEvent;
 import ru.alenavir.gameservice.entity.enums.EventType;
@@ -45,9 +44,5 @@ public class OutboxService {
 
     public void savePlayerEvent(Long playerId, PlayerEventType type, Object dto) {
         saveEvent(AggregateType.PLAYER, playerId.toString(), type, dto);
-    }
-
-    public void saveGameEvent(Long gameId, GameEventType type, Object dto) {
-        saveEvent(AggregateType.GAME, gameId.toString(), type, dto);
     }
 }

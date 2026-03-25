@@ -7,48 +7,49 @@ option java_outer_classname = "PlayerServiceProto";
 
 // DTO игрока
 message PlayerInfo {
-  int64 id = 1;
-  string name = 2;
-  int64 current_game_id = 3;
+  int64 id = 1;                 // Уникальный идентификатор игрока
+  string name = 2;              // Имя игрока
+  int64 current_game_id = 3;    // ID игры, в которой игрок сейчас участвует (0 если не в игре)
 }
 
-// создать игрока
+// Создать нового игрока
 message CreatePlayerRequest {
-  string name = 1;
+  string name = 1;              // Имя нового игрока
 }
 
 message CreatePlayerResponse {
-  PlayerInfo player = 1;
+  PlayerInfo player = 1;        // Данные созданного игрока
 }
 
-// получить игрока
+// Получить информацию об игроке
 message GetPlayerInfoRequest {
-  int64 player_id = 1;
+  int64 player_id = 1;          // ID игрока
 }
 
 message GetPlayerInfoResponse {
-  PlayerInfo player = 1;
+  PlayerInfo player = 1;        // Данные игрока
 }
 
-// существует ли игрок
+// Проверить, существует ли игрок
 message HasPlayerRequest {
-  int64 player_id = 1;
+  int64 player_id = 1;          // ID игрока
 }
 
 message HasPlayerResponse {
-  bool exists = 1;
+  bool exists = 1;              // true если игрок существует
 }
 
-// в игре ли игрок
+// Проверить, находится ли игрок в игре
 message HasCurrentGameRequest {
-  int64 player_id = 1;
+  int64 player_id = 1;          // ID игрока
 }
 
 message HasCurrentGameResponse {
-  bool exists = 1;
+  bool exists = 1;              // true если игрок находится в игре
+  int64 game_id = 2;            // ID игры (0 если игрок не в игре)
 }
 
-// gRPC сервис
+// gRPC сервис для работы с игроками
 service PlayerService {
   rpc CreatePlayer(CreatePlayerRequest) returns (CreatePlayerResponse);
   rpc GetPlayerInfo(GetPlayerInfoRequest) returns (GetPlayerInfoResponse);

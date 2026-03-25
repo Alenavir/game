@@ -7,9 +7,8 @@ option java_outer_classname = "UnitServiceProto";
 
 // Тип юнита
 enum UnitType {
-  UNKNOWN = 0;
-  KNIGHT = 1;
-  MAGICIAN = 2;
+  KNIGHT = 0;
+  MAGICIAN = 1;
 }
 
 // DTO для юнита
@@ -18,7 +17,7 @@ message UnitInfo {
   UnitType type = 2;
   double x = 3;
   double y = 4;
-  int64 owner_id = 5;
+  int64 player_id = 5;
   int64 game_id = 6;
   int32 health = 7;
 }
@@ -28,7 +27,7 @@ message CreateUnitRequest {
   UnitType type = 1;
   double x = 2;
   double y = 3;
-  int64 owner_id = 4;
+  int64 player_id = 4;
   int64 game_id = 5;
 }
 
@@ -48,8 +47,23 @@ message MoveUnitResponse {
   UnitInfo unit = 1;
 }
 
+// DTO для атаки юнита
+message AttackUnitRequest {
+  int64 attacker_id = 1;
+  int64 target_id = 2;
+  int64 player_id = 3; // игрок, который инициирует атаку
+}
+
+message AttackUnitResponse {
+  UnitInfo attacker = 1; // атакующий юнит (для MVP не меняется, но возвращаем)
+  UnitInfo target = 2;  // обновлённая цель (null, если юнит уничтожен)
+  int32 damage = 3;
+  bool target_dead = 4;
+}
+
 // gRPC сервис
 service UnitService {
   rpc CreateUnit(CreateUnitRequest) returns (CreateUnitResponse);
   rpc MoveUnit(MoveUnitRequest) returns (MoveUnitResponse);
+  rpc AttackUnit(AttackUnitRequest) returns (AttackUnitResponse); // новый метод
 }

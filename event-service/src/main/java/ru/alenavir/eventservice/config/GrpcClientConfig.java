@@ -1,21 +1,23 @@
-package ru.alenavir.unitservice.config;
+package ru.alenavir.eventservice.config;
 
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
+import jakarta.annotation.PreDestroy;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import ru.alenavir.gameservice.grpc.GameServiceGrpc;
 import ru.alenavir.playerservice.grpc.PlayerServiceGrpc;
-import jakarta.annotation.PreDestroy;
-import org.springframework.beans.factory.annotation.Qualifier;
+import ru.alenavir.unitservice.grpc.UnitServiceGrpc;
 
 @Configuration
 public class GrpcClientConfig {
 
     private ManagedChannel playerChannel;
+    private ManagedChannel unitChannel;
     private ManagedChannel gameChannel;
 
-    // Player Service
+    // ===== Player Service =====
     @Bean(name = "playerChannel")
     public ManagedChannel playerChannel() {
         this.playerChannel = ManagedChannelBuilder
@@ -31,7 +33,23 @@ public class GrpcClientConfig {
         return PlayerServiceGrpc.newBlockingStub(channel);
     }
 
-    // Game Service
+    // ===== Unit Service =====
+    @Bean(name = "unitChannel")
+    public ManagedChannel unitChannel() {
+        this.unitChannel = ManagedChannelBuilder
+                .forAddress("localhost", 9093)
+                .usePlaintext()
+                .build();
+        return this.unitChannel;
+    }
+
+    @Bean
+    public UnitServiceGrpc.UnitServiceBlockingStub unitStub(
+            @Qualifier("unitChannel") ManagedChannel channel) {
+        return UnitServiceGrpc.newBlockingStub(channel);
+    }
+
+    // ===== Game Service =====
     @Bean(name = "gameChannel")
     public ManagedChannel gameChannel() {
         this.gameChannel = ManagedChannelBuilder
@@ -47,14 +65,11 @@ public class GrpcClientConfig {
         return GameServiceGrpc.newBlockingStub(channel);
     }
 
-    // Graceful shutdown
+    // ===== Graceful shutdown =====
     @PreDestroy
     public void shutdown() {
         if (playerChannel != null) {
             playerChannel.shutdown();
-        }
-        if (gameChannel != null) {
-            gameChannel.shutdown();
         }
     }
 }

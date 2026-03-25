@@ -19,22 +19,27 @@ message GameInfo {
   repeated int64 player_ids = 3;
 }
 
+// --- Запросы и ответы ---
+
 // создание игры
 message CreateGameRequest {
   int64 player_id = 1; // Создатель матча
 }
 
+// Возвращаем сразу всю информацию об игре
 message CreateGameResponse {
-  int64 game_id = 1;
+  GameInfo game = 1;
 }
 
-// присоед. к игре
+// присоединение к игре
 message JoinGameRequest {
   int64 player_id = 1;
   int64 game_id = 2;
 }
 
+// Возвращаем актуальное состояние игры после присоединения
 message JoinGameResponse {
+  GameInfo game = 1;
 }
 
 // покинуть игру
@@ -43,7 +48,9 @@ message LeaveGameRequest {
   int64 game_id = 2;
 }
 
+// Возвращаем состояние игры после выхода
 message LeaveGameResponse {
+  GameInfo game = 1;
 }
 
 // начать игру
@@ -51,7 +58,9 @@ message StartGameRequest {
   int64 game_id = 1;
 }
 
+// Возвращаем состояние игры после старта
 message StartGameResponse {
+  GameInfo game = 1;
 }
 
 // получить инфу об игре
@@ -63,16 +72,16 @@ message GetGameResponse {
   GameInfo game = 1;
 }
 
-// Игра в активном состоянии
+// проверить, идёт ли игра
 message IsGameRunningRequest {
   int64 game_id = 1;
 }
 
 message IsGameRunningResponse {
-  bool exists = 1;
+  bool exists = 1; // true, если игра есть и идёт
 }
 
-// gRPC сервис
+// --- gRPC сервис ---
 service GameService {
   rpc CreateGame(CreateGameRequest) returns (CreateGameResponse);
   rpc JoinGame(JoinGameRequest) returns (JoinGameResponse);

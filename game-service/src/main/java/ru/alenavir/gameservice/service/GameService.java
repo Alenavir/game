@@ -5,9 +5,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.alenavir.gameservice.dto.GameInfoDto;
-import ru.alenavir.gameservice.dto.events.game.GameFinishedEvent;
-import ru.alenavir.gameservice.dto.events.game.GameStartedEvent;
-import ru.alenavir.gameservice.dto.events.game.enums.GameEventType;
 import ru.alenavir.gameservice.dto.events.player.PlayerJoinedEvent;
 import ru.alenavir.gameservice.dto.events.player.PlayerLeftEvent;
 import ru.alenavir.gameservice.dto.events.player.enums.PlayerEventType;
@@ -32,7 +29,8 @@ public class GameService {
     private final GameMapper mapper;
     private final OutboxService outboxService;
 
-    public Long createGame(Long playerId) {
+    @Transactional
+    public GameInfoDto createGame(Long playerId) {
         validatePlayer(playerId);
 
         Game game = new Game();
@@ -49,11 +47,11 @@ public class GameService {
 
         log.info("Игра {} создана с игроком {}", saved.getId(), playerId);
 
-        return saved.getId();
+        return mapper.toDto(saved);
     }
 
     @Transactional
-    public void joinGame(Long playerId, Long gameId) {
+    public GameInfoDto joinGame(Long playerId, Long gameId) {
         validatePlayer(playerId);
 
         Game game = gameRepo.findById(gameId).orElseThrow(() -> {
@@ -79,17 +77,18 @@ public class GameService {
         );
 
         log.info("Игрок {} присоединился к игре {}", playerId, gameId);
+
+        return mapper.toDto(game);
     }
 
     @Transactional
-    public void leaveGame(Long playerId, Long gameId) {
+    public GameInfoDto leaveGame(Long playerId, Long gameId) {
         Game game = gameRepo.findById(gameId).orElseThrow(() -> {
             log.warn("Игра с id={} не найдена", gameId);
             return new NotFoundException("Game with id " + gameId + " not found");
         });
 
         if (!game.getPlayerIds().contains(playerId)) {
-            log.warn("Игрок id={} не участвует в игре id={}", playerId, gameId);
             throw new BadRequestException("Player is not in this game");
         }
 
@@ -102,13 +101,15 @@ public class GameService {
                 new PlayerLeftEvent(playerId, gameId)
         );
 
-        log.info("Игрок id={} вышел из игры id={}", playerId, gameId);
+        log.info("Игрок {} вышел из игры {}", playerId, gameId);
 
         finishGameIfEmpty(game);
+
+        return mapper.toDto(game);
     }
 
     @Transactional
-    public void startGame(Long gameId) {
+    public GameInfoDto startGame(Long gameId) {
         Game game = gameRepo.findById(gameId).orElseThrow(() -> {
             log.warn("Игра с id={} не найдена", gameId);
             return new NotFoundException("Game with id " + gameId + " not found");
@@ -121,34 +122,13 @@ public class GameService {
         game.setState(GameState.RUNNING);
         gameRepo.save(game);
 
-        outboxService.saveGameEvent(
-                gameId,
-                GameEventType.GAME_STARTED,
-                new GameStartedEvent(gameId, game.getPlayerIds())
-        );
-
         log.info("Игра {} началась", gameId);
-    }
 
-    private void finishGameIfEmpty(Game game) {
-        if (!game.getPlayerIds().isEmpty()) {
-            return;
-        }
-
-        game.setState(GameState.FINISHED);
-        gameRepo.save(game);
-
-        outboxService.saveGameEvent(
-                game.getId(),
-                GameEventType.GAME_FINISHED,
-                new GameFinishedEvent(game.getId())
-        );
-
-        log.info("Игра id={} завершена, так как игроков не осталось", game.getId());
+        return mapper.toDto(game);
     }
 
     public GameInfoDto getGameInfo(Long gameId) {
-        Game game = gameRepo.findByIdWithPlayers(gameId).orElseThrow(() -> {
+        Game game = gameRepo.findById(gameId).orElseThrow(() -> {
             log.warn("Игра с id={} не найдена", gameId);
             return new NotFoundException("Game with id " + gameId + " not found");
         });
@@ -160,11 +140,17 @@ public class GameService {
         return gameRepo.existsByIdAndState(gameId, GameState.RUNNING);
     }
 
+    private void finishGameIfEmpty(Game game) {
+        if (!game.getPlayerIds().isEmpty()) return;
+
+        game.setState(GameState.FINISHED);
+        gameRepo.save(game);
+
+        log.info("Игра {} завершена, так как игроков не осталось", game.getId());
+    }
+
     private void validatePlayer(Long playerId) {
-        try {
-            playerClient.hasPlayer(playerId);
-        } catch (Exception e) {
-            throw new NotFoundException("Player not found: " + playerId);
-        }
+        boolean exists = playerClient.hasPlayer(playerId);
+        if (!exists) throw new NotFoundException("Player not found: " + playerId);
     }
 }

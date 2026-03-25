@@ -8,20 +8,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.alenavir.unitservice.dto.CreatedUnitDto;
 import ru.alenavir.unitservice.dto.UnitInfoDto;
-import ru.alenavir.unitservice.dto.events.unit.UnitCreatedEvent;
-import ru.alenavir.unitservice.dto.events.unit.UnitMovedEvent;
-import ru.alenavir.unitservice.dto.events.unit.enums.UnitEventType;
-import ru.alenavir.unitservice.entity.OutboxEvent;
 import ru.alenavir.unitservice.entity.Position;
 import ru.alenavir.unitservice.entity.Unit;
-import ru.alenavir.unitservice.entity.enums.EventType;
 import ru.alenavir.unitservice.exceptions.BadRequestException;
 import ru.alenavir.unitservice.exceptions.NotFoundException;
 import ru.alenavir.unitservice.factory.UnitFactory;
 import ru.alenavir.unitservice.grpc.client.GameClient;
 import ru.alenavir.unitservice.grpc.client.PlayerClient;
 import ru.alenavir.unitservice.mapper.UnitMapper;
-import ru.alenavir.unitservice.repo.OutboxRepo;
 import ru.alenavir.unitservice.repo.UnitRepo;
 
 @Service
@@ -32,9 +26,7 @@ public class UnitService {
     private final UnitRepo repo;
     private final PlayerClient playerClient;
     private final GameClient gameClient;
-    private final OutboxRepo outboxRepo;
     private final UnitMapper mapper;
-    private final ObjectMapper objectMapper;
 
     @Transactional
     public UnitInfoDto createUnit(CreatedUnitDto unitDto) {
@@ -52,26 +44,6 @@ public class UnitService {
         );
 
         Unit savedUnit = repo.save(unit);
-
-        UnitCreatedEvent eventDto = new UnitCreatedEvent(
-                unit.getId(), unit.getGameId(), unit.getOwnerId(), unit.getType(),
-                unit.getPosition().getX(), unit.getPosition().getY(), unit.getHealth()
-        );
-
-        String payload;
-        try {
-            payload = objectMapper.writeValueAsString(eventDto);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-
-        OutboxEvent event = new OutboxEvent();
-        event.setAggregateType("UNIT");
-        event.setAggregateId(unit.getId().toString());
-        event.setEventType(UnitEventType.UNIT_CREATED.name());
-        event.setPayload(payload);
-
-        outboxRepo.save(event);
 
         log.info("Создан юнит {} типа {} для игрока {} в игре {}",
                 savedUnit.getId(),
@@ -107,26 +79,6 @@ public class UnitService {
 
         repo.save(unit);
 
-        UnitMovedEvent eventDto = new UnitMovedEvent(
-                unit.getGameId(), unit.getId(),
-                unit.getPosition().getX(), unit.getPosition().getY()
-        );
-
-        String payload;
-        try {
-            payload = objectMapper.writeValueAsString(eventDto);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-
-        OutboxEvent event = new OutboxEvent();
-        event.setAggregateType("UNIT");
-        event.setAggregateId(unit.getId().toString());
-        event.setEventType(UnitEventType.UNIT_MOVED.name());
-        event.setPayload(payload);
-
-        outboxRepo.save(event);
-
         log.info("Юнит {} перемещён игроком {} с ({}, {}) на ({}, {})",
                 unit.getId(),
                 playerId,
@@ -134,6 +86,44 @@ public class UnitService {
                 newPosition.getX(), newPosition.getY());
 
         return mapper.toDto(unit);
+    }
+
+    @Transactional
+    public UnitInfoDto attackUnit(Long attackerId, Long targetId, Long playerId) {
+        // Проверка, что игрок владеет атакующим юнитом
+        Unit attacker = repo.findById(attackerId).orElseThrow(() -> {
+            log.warn("Атакующий юнит с id={} не найден", attackerId);
+            return new NotFoundException("Attacker unit not found");
+        });
+        if (!attacker.getOwnerId().equals(playerId)) {
+            throw new BadRequestException("Unit does not belong to player");
+        }
+
+        // Проверка цели
+        Unit target = repo.findById(targetId).orElseThrow(() -> {
+            log.warn("Цель с id={} не найдена", targetId);
+            return new NotFoundException("Target unit not found");
+        });
+
+        // Проверка, что оба юнита в одной игре
+        if (!attacker.getGameId().equals(target.getGameId())) {
+            throw new BadRequestException("Units are not in the same game");
+        }
+
+        // Минимальный расчет урона
+        int damage = 10;
+        target.setHealth(target.getHealth() - damage);
+
+        // Если HP ≤ 0, юнит умирает
+        if (target.getHealth() <= 0) {
+            repo.delete(target);
+            log.info("Юнит {} уничтожен юнитом {}", target.getId(), attacker.getId());
+        } else {
+            repo.save(target);
+            log.info("Юнит {} атакован юнитом {}. HP теперь {}", target.getId(), attacker.getId(), target.getHealth());
+        }
+
+        return mapper.toDto(attacker);
     }
 
     private void validatePlayer(Long playerId) {
@@ -165,5 +155,9 @@ public class UnitService {
             log.warn("Некорректная позиция юнита: x={}, y={}", position.getX(), position.getY());
             throw new BadRequestException("Invalid unit position: " + position);
         }
+    }
+
+    public Unit getUnitById(Long unitId) {
+        return repo.findById(unitId).orElse(null); // null если юнит уничтожен
     }
 }

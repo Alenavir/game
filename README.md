@@ -18,3 +18,30 @@
 3. Микросервисы обрабатывают команду, изменяют состояние игры.
 4. EventService рассылает всем игрокам обновления через Netty каналы (broadcast).
 5. Все действия происходят в реальном времени, синхронизируя состояние у всех игроков.
+
+---
+
+## Примеры команд
+СОЗДАНИЕ ИГРОКА
+{"commandType":"PLAYER_CREATE","payload":{"name":"Alice"}}
+
+СОЗДАНИЕ ИГРЫ
+{"commandType":"GAME_CREATE","payload":{"playerId":1}}
+
+ПРИСОЕД ИГРОКА
+{"commandType":"PLAYER_JOIN","payload":{"playerId":3,"gameId":1}}
+
+ВЫХОД ИГРОКА
+{"commandType":"PLAYER_LEAVE","payload":{"playerId":3,"gameId":1}}
+
+СТАРТ ИГРЫ
+{"commandType":"GAME_START","payload":{"gameId":1}}
+
+СОЗДАНИЕ ЮНИТА
+{"commandType":"UNIT_CREATE","payload":{"type":"MAGICIAN","x":10,"y":20,"playerId":2,"gameId":1}}
+
+ПЕРЕДВИЖЕНИЕ ЮНИТА
+{"commandType":"UNIT_MOVE","payload":{"unitId":1,"playerId":1,"x":30,"y":40}}
+
+АТАКОВАТЬ ЮНИТ
+{"commandType":"UNIT_ATTACK","payload":{"playerId":1,"attackerId":1,"targetId":2}}

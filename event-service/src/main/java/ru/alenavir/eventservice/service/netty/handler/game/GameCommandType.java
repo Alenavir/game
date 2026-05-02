@@ -4,5 +4,6 @@ public enum GameCommandType {
     PLAYER_JOIN,
     PLAYER_LEAVE,
     GAME_START,
-    GAME_CREATE
+    GAME_CREATE,
+    RECONNECT
 }

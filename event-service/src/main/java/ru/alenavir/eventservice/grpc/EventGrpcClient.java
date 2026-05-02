@@ -97,6 +97,24 @@ public class EventGrpcClient {
         return gameMapper.toDto(grpcResponse.getGame());
     }
 
+    public GameDto getGame(Long gameId) {
+        GameServiceProto.GetGameRequest grpcRequest =
+                GameServiceProto.GetGameRequest.newBuilder()
+                        .setGameId(gameId)
+                        .build();
+
+        GameServiceProto.GetGameResponse grpcResponse = gameService.getGame(grpcRequest);
+
+        GameServiceProto.GameInfo game = grpcResponse.getGame();
+
+        log.info("Получена игра: id={}, state={}, players={}",
+                game.getId(),
+                game.getState(),
+                game.getPlayerIdsList());
+
+        return gameMapper.toDto(grpcResponse.getGame());
+    }
+
     // UNIT
     public UnitDto createUnit(UnitServiceProto.UnitType type, double x, double y, Long playerId, Long gameId) {
         UnitServiceProto.CreateUnitRequest grpcRequest =

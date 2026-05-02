@@ -5,3 +5,14 @@ spring:
 grpc:
   server:
     port: 9094
+
+services:
+  player:
+    host: localhost
+    port: 9091
+  unit:
+    host: localhost
+    port: 9093
+  game:
+    host: localhost
+    port: 9090

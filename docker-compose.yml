@@ -1,5 +1,4 @@
 version: "3.9"
-
 services:
   kafka:
     image: bitnami/kafka:3.7
@@ -13,9 +12,86 @@ services:
       KAFKA_CFG_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
       KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
       KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
-      KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
       KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE: "false"
       ALLOW_PLAINTEXT_LISTENER: "yes"
     volumes:
       - ./kafka-data:/bitnami/kafka/data
+    healthcheck:
+      test: ["CMD", "kafka-topics.sh", "--bootstrap-server", "localhost:9092", "--list"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
+  player-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE_NAME: player-service
+    container_name: player-service
+    ports:
+      - "9091:9091"
+    environment:
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      GRPC_SERVER_PORT: 9091
+    depends_on:
+      kafka:
+        condition: service_healthy
+
+  game-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE_NAME: game-service
+    container_name: game-service
+    ports:
+      - "9090:9090"
+    environment:
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      GRPC_SERVER_PORT: 9090
+      PLAYER_SERVICE_GRPC_HOST: player-service
+      PLAYER_SERVICE_GRPC_PORT: 9091
+    depends_on:
+      kafka:
+        condition: service_healthy
+      player-service:
+        condition: service_started
+
+  unit-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE_NAME: unit-service
+    container_name: unit-service
+    ports:
+      - "9093:9093"
+    environment:
+      GRPC_SERVER_PORT: 9093
+    depends_on:
+      - game-service
+
+  event-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE_NAME: event-service
+    container_name: event-service
+    ports:
+      - "8081:8081"
+      - "9094:9094"
+    environment:
+      NETTY_PORT: 8081
+      SERVICES_PLAYER_HOST: player-service
+      SERVICES_PLAYER_PORT: 9091
+      SERVICES_UNIT_HOST: unit-service
+      SERVICES_UNIT_PORT: 9093
+      SERVICES_GAME_HOST: game-service
+      SERVICES_GAME_PORT: 9090
+    depends_on:
+      - game-service
+      - unit-service
+      - player-service

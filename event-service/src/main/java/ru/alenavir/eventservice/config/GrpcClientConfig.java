@@ -4,6 +4,7 @@ import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import jakarta.annotation.PreDestroy;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import ru.alenavir.gameservice.grpc.GameServiceGrpc;
@@ -13,15 +14,29 @@ import ru.alenavir.unitservice.grpc.UnitServiceGrpc;
 @Configuration
 public class GrpcClientConfig {
 
+    @Value("${services.player.host}")
+    private String playerHost;
+    @Value("${services.player.port}")
+    private int playerPort;
+
+    @Value("${services.unit.host}")
+    private String unitHost;
+    @Value("${services.unit.port}")
+    private int unitPort;
+
+    @Value("${services.game.host}")
+    private String gameHost;
+    @Value("${services.game.port}")
+    private int gamePort;
+
     private ManagedChannel playerChannel;
     private ManagedChannel unitChannel;
     private ManagedChannel gameChannel;
 
-    // ===== Player Service =====
     @Bean(name = "playerChannel")
     public ManagedChannel playerChannel() {
         this.playerChannel = ManagedChannelBuilder
-                .forAddress("localhost", 9091)
+                .forAddress(playerHost, playerPort)
                 .usePlaintext()
                 .build();
         return this.playerChannel;
@@ -33,11 +48,10 @@ public class GrpcClientConfig {
         return PlayerServiceGrpc.newBlockingStub(channel);
     }
 
-    // ===== Unit Service =====
     @Bean(name = "unitChannel")
     public ManagedChannel unitChannel() {
         this.unitChannel = ManagedChannelBuilder
-                .forAddress("localhost", 9093)
+                .forAddress(unitHost, unitPort)
                 .usePlaintext()
                 .build();
         return this.unitChannel;
@@ -49,11 +63,10 @@ public class GrpcClientConfig {
         return UnitServiceGrpc.newBlockingStub(channel);
     }
 
-    // ===== Game Service =====
     @Bean(name = "gameChannel")
     public ManagedChannel gameChannel() {
         this.gameChannel = ManagedChannelBuilder
-                .forAddress("localhost", 9090)
+                .forAddress(gameHost, gamePort)
                 .usePlaintext()
                 .build();
         return this.gameChannel;
@@ -65,11 +78,10 @@ public class GrpcClientConfig {
         return GameServiceGrpc.newBlockingStub(channel);
     }
 
-    // ===== Graceful shutdown =====
     @PreDestroy
     public void shutdown() {
-        if (playerChannel != null) {
-            playerChannel.shutdown();
-        }
+        if (playerChannel != null) playerChannel.shutdown();
+        if (unitChannel != null) unitChannel.shutdown();
+        if (gameChannel != null) gameChannel.shutdown();
     }
 }

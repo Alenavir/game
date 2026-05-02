@@ -4,7 +4,14 @@
 
 ## Стек технологий
 
-Java 17 · Spring Boot · Netty (TCP) · gRPC · Kafka · Flyway · H2 · Docker
+![Java](https://img.shields.io/badge/Java_17-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)
+![Spring Boot](https://img.shields.io/badge/Spring_Boot-6DB33F?style=for-the-badge&logo=springboot&logoColor=white)
+![Apache Kafka](https://img.shields.io/badge/Kafka-231F20?style=for-the-badge&logo=apachekafka&logoColor=white)
+![gRPC](https://img.shields.io/badge/gRPC-244c5a?style=for-the-badge&logo=grpc&logoColor=white)
+![Netty](https://img.shields.io/badge/Netty-004088?style=for-the-badge&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
+![H2](https://img.shields.io/badge/H2-0000CC?style=for-the-badge&logoColor=white)
+![Flyway](https://img.shields.io/badge/Flyway-CC0200?style=for-the-badge&logo=flyway&logoColor=white)
 
 ---
 

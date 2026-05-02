@@ -87,10 +87,24 @@ Java 17 · Spring Boot · Netty (TCP) · gRPC · Kafka · Flyway · H2 · Docker
 ## Запуск
 
 ```bash
-docker-compose up
+docker compose up --build
 ```
 
 Каждый сервис поднимается в отдельном контейнере. В качестве БД используется H2 (in-memory) — для упрощения dev-окружения. В production-окружении предполагается замена на PostgreSQL.
+
+## Подключение и отправка команд
+
+Клиент подключается к EventService через TCP на порт 8081. Для тестирования можно использовать `telnet`:
+
+```bash
+telnet localhost 8081
+```
+
+После подключения вводить JSON-команды и нажимать Enter:
+
+```json
+{"commandType":"PLAYER_CREATE","payload":{"name":"Alice"}}
+```
 
 ---
 

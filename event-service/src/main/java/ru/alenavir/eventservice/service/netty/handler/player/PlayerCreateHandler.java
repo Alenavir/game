@@ -4,25 +4,31 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.netty.channel.ChannelHandlerContext;
-import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import ru.alenavir.eventservice.dto.PlayerDto;
 import ru.alenavir.eventservice.grpc.EventGrpcClient;
-import ru.alenavir.eventservice.service.netty.handler.CommandHandler;
+import ru.alenavir.eventservice.service.netty.handler.BaseCommandHandler;
 
-import java.util.Set;
+import java.util.concurrent.ExecutorService;
+
 
 @Component
 @Slf4j
-@RequiredArgsConstructor
-public class PlayerCreateHandler implements CommandHandler {
+public class PlayerCreateHandler extends BaseCommandHandler {
 
     private final EventGrpcClient client;
-    private final ObjectMapper objectMapper;
-    private final Validator validator;
+
+    public PlayerCreateHandler(ObjectMapper objectMapper,
+                               Validator validator,
+                               @Qualifier("nettyBusinessExecutor") ExecutorService nettyBusinessExecutor,
+                               EventGrpcClient client) {
+        super(objectMapper, validator, nettyBusinessExecutor);
+        this.client = client;
+    }
 
     @Override
     public String getCommandType() {
@@ -31,18 +37,25 @@ public class PlayerCreateHandler implements CommandHandler {
 
     @Override
     public void handle(JsonNode payload, ChannelHandlerContext ctx) {
+        PlayerCreateCommand cmd;
         try {
-            PlayerCreateCommand cmd = objectMapper.treeToValue(payload, PlayerCreateCommand.class);
+            cmd = objectMapper.treeToValue(payload, PlayerCreateCommand.class);
+        } catch (Exception e) {
+            log.warn("Не удалось десериализовать PlayerCreateCommand: {}", e.getMessage());
+            sendError(ctx, "Invalid payload");
+            return;
+        }
 
-            Set<ConstraintViolation<PlayerCreateCommand>> violations = validator.validate(cmd);
-            if (!violations.isEmpty()) {
-                sendValidationError(ctx, violations);
-                return;
-            }
+        var violations = validate(cmd);
+        if (!violations.isEmpty()) {
+            sendValidationError(ctx, violations);
+            return;
+        }
 
+        executeAsync(ctx, () -> {
             PlayerDto response = client.createPlayer(cmd.name());
 
-            log.info("Создание игрока {} с именем {}", response.id(), response.name());
+            log.info("Игрок создан: id={}, name={}", response.id(), response.name());
 
             ObjectNode payloadNode = objectMapper.createObjectNode();
             payloadNode.put("playerId", response.id());
@@ -53,29 +66,6 @@ public class PlayerCreateHandler implements CommandHandler {
             wrapper.set("payload", payloadNode);
 
             ctx.writeAndFlush(wrapper + "\n");
-
-        } catch (Exception e) {
-            log.error("Ошибка при обработке PLAYER_CREATED", e);
-            sendError(ctx, "Failed to create player");
-        }
+        });
     }
-
-    private void sendValidationError(ChannelHandlerContext ctx,
-                                     Set<ConstraintViolation<PlayerCreateCommand>> violations) {
-
-        String message = violations.stream()
-                .map(v -> v.getPropertyPath() + " " + v.getMessage())
-                .findFirst()
-                .orElse("Validation error");
-
-        sendError(ctx, message);
-    }
-
-    private void sendError(ChannelHandlerContext ctx, String message) {
-        ObjectNode error = objectMapper.createObjectNode();
-        error.put("type", "ERROR");
-        error.put("message", message);
-        ctx.writeAndFlush(error + "\n");
-    }
-
 }

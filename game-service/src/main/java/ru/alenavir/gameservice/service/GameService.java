@@ -127,6 +127,7 @@ public class GameService {
         return mapper.toDto(game);
     }
 
+    @Transactional(readOnly = true)
     public GameInfoDto getGameInfo(Long gameId) {
         Game game = gameRepo.findById(gameId).orElseThrow(() -> {
             log.warn("Игра с id={} не найдена", gameId);

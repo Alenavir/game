@@ -4,6 +4,7 @@ import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import jakarta.annotation.PreDestroy;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import ru.alenavir.playerservice.grpc.PlayerServiceGrpc;
@@ -11,13 +12,18 @@ import ru.alenavir.playerservice.grpc.PlayerServiceGrpc;
 @Configuration
 public class GrpcClientConfig {
 
+    @Value("${player.service.grpc.host:localhost}")
+    private String playerHost;
+
+    @Value("${player.service.grpc.port:9091}")
+    private int playerPort;
+
     private ManagedChannel playerChannel;
 
-    // ===== Player Service =====
     @Bean(name = "playerChannel")
     public ManagedChannel playerChannel() {
         this.playerChannel = ManagedChannelBuilder
-                .forAddress("localhost", 9091)
+                .forAddress(playerHost, playerPort)
                 .usePlaintext()
                 .build();
         return this.playerChannel;
@@ -29,7 +35,6 @@ public class GrpcClientConfig {
         return PlayerServiceGrpc.newBlockingStub(channel);
     }
 
-    // ===== Graceful shutdown =====
     @PreDestroy
     public void shutdown() {
         if (playerChannel != null) {

@@ -4,28 +4,34 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.netty.channel.ChannelHandlerContext;
-import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import ru.alenavir.eventservice.dto.AttackUnitDto;
 import ru.alenavir.eventservice.grpc.EventGrpcClient;
 import ru.alenavir.eventservice.service.netty.NettyServer;
-import ru.alenavir.eventservice.service.netty.handler.CommandHandler;
+import ru.alenavir.eventservice.service.netty.handler.BaseCommandHandler;
 import ru.alenavir.eventservice.service.netty.handler.unit.command.UnitAttackCommand;
 
-import java.util.Set;
+import java.util.concurrent.ExecutorService;
 
 @Component
 @Slf4j
-@RequiredArgsConstructor
-public class UnitAttackHandler implements CommandHandler {
+public class UnitAttackHandler extends BaseCommandHandler {
 
     private final EventGrpcClient client;
-    private final ObjectMapper objectMapper;
-    private final Validator validator;
     private final NettyServer nettyServer;
+
+    public UnitAttackHandler(ObjectMapper objectMapper,
+                             Validator validator,
+                             @Qualifier("nettyBusinessExecutor") ExecutorService nettyBusinessExecutor,
+                             EventGrpcClient client,
+                             NettyServer nettyServer) {
+        super(objectMapper, validator, nettyBusinessExecutor);
+        this.client = client;
+        this.nettyServer = nettyServer;
+    }
 
     @Override
     public String getCommandType() {
@@ -34,15 +40,22 @@ public class UnitAttackHandler implements CommandHandler {
 
     @Override
     public void handle(JsonNode payload, ChannelHandlerContext ctx) {
+        UnitAttackCommand cmd;
         try {
-            UnitAttackCommand cmd = objectMapper.treeToValue(payload, UnitAttackCommand.class);
+            cmd = objectMapper.treeToValue(payload, UnitAttackCommand.class);
+        } catch (Exception e) {
+            log.warn("Не удалось десериализовать UnitAttackCommand: {}", e.getMessage());
+            sendError(ctx, "Invalid payload");
+            return;
+        }
 
-            Set<ConstraintViolation<UnitAttackCommand>> violations = validator.validate(cmd);
-            if (!violations.isEmpty()) {
-                sendValidationError(ctx, violations);
-                return;
-            }
+        var violations = validate(cmd);
+        if (!violations.isEmpty()) {
+            sendValidationError(ctx, violations);
+            return;
+        }
 
+        executeAsync(ctx, () -> {
             AttackUnitDto response = client.attackUnit(
                     cmd.playerId(),
                     cmd.targetId(),
@@ -76,26 +89,6 @@ public class UnitAttackHandler implements CommandHandler {
                     "UNIT_ATTACKED_BROADCAST",
                     ctx.channel()
             );
-
-        } catch (Exception e) {
-            log.error("Ошибка при обработке UNIT_ATTACKED", e);
-            sendError(ctx, "Failed to attack unit");
-        }
-    }
-
-    private void sendValidationError(ChannelHandlerContext ctx,
-                                     Set<ConstraintViolation<UnitAttackCommand>> violations) {
-        String message = violations.stream()
-                .map(v -> v.getPropertyPath() + " " + v.getMessage())
-                .findFirst()
-                .orElse("Validation error");
-        sendError(ctx, message);
-    }
-
-    private void sendError(ChannelHandlerContext ctx, String message) {
-        ObjectNode error = objectMapper.createObjectNode();
-        error.put("type", "ERROR");
-        error.put("message", message);
-        ctx.writeAndFlush(error + "\n");
+        });
     }
 }

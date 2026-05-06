@@ -11,6 +11,10 @@ import ru.alenavir.gameservice.grpc.GameServiceGrpc;
 import ru.alenavir.playerservice.grpc.PlayerServiceGrpc;
 import ru.alenavir.unitservice.grpc.UnitServiceGrpc;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+
 @Configuration
 public class GrpcClientConfig {
 
@@ -32,6 +36,16 @@ public class GrpcClientConfig {
     private ManagedChannel playerChannel;
     private ManagedChannel unitChannel;
     private ManagedChannel gameChannel;
+
+    @Bean("nettyBusinessExecutor")
+    public ExecutorService nettyBusinessExecutor() {
+        return Executors.newFixedThreadPool(32);  // под grpc вызовы
+    }
+
+    @Bean("disconnectScheduler")
+    public ScheduledExecutorService disconnectScheduler() {
+        return Executors.newScheduledThreadPool(4);
+    }
 
     @Bean(name = "playerChannel")
     public ManagedChannel playerChannel() {

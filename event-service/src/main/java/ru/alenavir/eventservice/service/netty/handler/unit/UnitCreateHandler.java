@@ -4,29 +4,35 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.netty.channel.ChannelHandlerContext;
-import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import ru.alenavir.eventservice.dto.UnitDto;
 import ru.alenavir.eventservice.grpc.EventGrpcClient;
 import ru.alenavir.eventservice.service.netty.NettyServer;
-import ru.alenavir.eventservice.service.netty.handler.CommandHandler;
+import ru.alenavir.eventservice.service.netty.handler.BaseCommandHandler;
 import ru.alenavir.eventservice.service.netty.handler.unit.command.UnitCreateCommand;
 import ru.alenavir.unitservice.grpc.UnitServiceProto;
 
-import java.util.Set;
+import java.util.concurrent.ExecutorService;
 
 @Component
 @Slf4j
-@RequiredArgsConstructor
-public class UnitCreateHandler implements CommandHandler {
+public class UnitCreateHandler extends BaseCommandHandler {
 
     private final EventGrpcClient client;
-    private final ObjectMapper objectMapper;
-    private final Validator validator;
     private final NettyServer nettyServer;
+
+    public UnitCreateHandler(ObjectMapper objectMapper,
+                             Validator validator,
+                             @Qualifier("nettyBusinessExecutor") ExecutorService nettyBusinessExecutor,
+                             EventGrpcClient client,
+                             NettyServer nettyServer) {
+        super(objectMapper, validator, nettyBusinessExecutor);
+        this.client = client;
+        this.nettyServer = nettyServer;
+    }
 
     @Override
     public String getCommandType() {
@@ -35,15 +41,22 @@ public class UnitCreateHandler implements CommandHandler {
 
     @Override
     public void handle(JsonNode payload, ChannelHandlerContext ctx) {
+        UnitCreateCommand cmd;
         try {
-            UnitCreateCommand cmd = objectMapper.treeToValue(payload, UnitCreateCommand.class);
+            cmd = objectMapper.treeToValue(payload, UnitCreateCommand.class);
+        } catch (Exception e) {
+            log.warn("Не удалось десериализовать UnitCreateCommand: {}", e.getMessage());
+            sendError(ctx, "Invalid payload");
+            return;
+        }
 
-            Set<ConstraintViolation<UnitCreateCommand>> violations = validator.validate(cmd);
-            if (!violations.isEmpty()) {
-                sendValidationError(ctx, violations);
-                return;
-            }
+        var violations = validate(cmd);
+        if (!violations.isEmpty()) {
+            sendValidationError(ctx, violations);
+            return;
+        }
 
+        executeAsync(ctx, () -> {
             UnitServiceProto.UnitType grpcType = UnitServiceProto.UnitType.valueOf(cmd.type().name());
 
             UnitDto response = client.createUnit(
@@ -68,7 +81,6 @@ public class UnitCreateHandler implements CommandHandler {
             ObjectNode wrapper = objectMapper.createObjectNode();
             wrapper.put("type", "UNIT_CREATED_RESPONSE");
             wrapper.set("payload", payloadNode);
-
             ctx.writeAndFlush(wrapper + "\n");
 
             nettyServer.broadcastToGame(
@@ -77,28 +89,6 @@ public class UnitCreateHandler implements CommandHandler {
                     "UNIT_CREATED_BROADCAST",
                     ctx.channel()
             );
-
-        } catch (Exception e) {
-            log.error("Ошибка при обработке UNIT_CREATED", e);
-            sendError(ctx, "Failed to create unit");
-        }
-    }
-
-    private void sendValidationError(ChannelHandlerContext ctx,
-                                     Set<ConstraintViolation<UnitCreateCommand>> violations) {
-
-        String message = violations.stream()
-                .map(v -> v.getPropertyPath() + " " + v.getMessage())
-                .findFirst()
-                .orElse("Validation error");
-
-        sendError(ctx, message);
-    }
-
-    private void sendError(ChannelHandlerContext ctx, String message) {
-        ObjectNode error = objectMapper.createObjectNode();
-        error.put("type", "ERROR");
-        error.put("message", message);
-        ctx.writeAndFlush(error + "\n");
+        });
     }
 }

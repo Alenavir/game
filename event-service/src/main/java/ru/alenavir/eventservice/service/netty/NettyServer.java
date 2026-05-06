@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ScheduledFuture;
 
 /**
  * Хранит все подключения игроков (gameId → channels)
@@ -24,25 +25,30 @@ public class NettyServer {
     private final ObjectMapper objectMapper;
 
     private final Map<String, ConcurrentLinkedQueue<Channel>> gameChannels = new ConcurrentHashMap<>();
+    private final Map<Long, ScheduledFuture<?>> disconnectTasks = new ConcurrentHashMap<>();
 
     public void addChannel(String gameId, Channel channel) {
         gameChannels
-                .computeIfAbsent(gameId, k -> new ConcurrentLinkedQueue<>());
-
-        ConcurrentLinkedQueue<Channel> channels = gameChannels.get(gameId);
-
-        if (!channels.contains(channel)) {
-            channels.add(channel);
-        }
+                .computeIfAbsent(gameId, k -> new ConcurrentLinkedQueue<>())
+                .add(channel);
     }
 
     public void removeChannel(String gameId, Channel channel) {
-        ConcurrentLinkedQueue<Channel> channels = gameChannels.get(gameId);
-        if (channels != null) {
+        gameChannels.computeIfPresent(gameId, (k, channels) -> {
             channels.remove(channel);
-            if (channels.isEmpty()) {
-                gameChannels.remove(gameId);
-            }
+            return channels.isEmpty() ? null : channels;
+        });
+    }
+
+    public void scheduleDisconnect(Long playerId, ScheduledFuture<?> task) {
+        disconnectTasks.put(playerId, task);
+    }
+
+    public void cancelDisconnect(Long playerId) {
+        ScheduledFuture<?> task = disconnectTasks.remove(playerId);
+        if (task != null) {
+            task.cancel(false);
+            log.info("Таймер реконнекта для игрока {} отменён", playerId);
         }
     }
 
@@ -55,16 +61,29 @@ public class NettyServer {
 
             ConcurrentLinkedQueue<Channel> channels = gameChannels.get(gameId);
 
-            if (channels != null) {
-                channels.forEach(ch -> {
-                    if (ch.isActive() && ch != exclude) {
-                        ch.writeAndFlush(json + "\n");
-                    }
-                });
+            if (channels == null || channels.isEmpty()) {
+                log.warn("broadcastToGame: нет каналов для игры {}, eventType={}", gameId, eventType);
+                return;
+            }
+
+            int sent = 0;
+            for (Channel ch : channels) {
+                if (ch.isActive() && ch != exclude) {
+                    ch.writeAndFlush(json + "\n");
+                    sent++;
+                }
+            }
+
+            log.debug("broadcast gameId={} eventType={} отправлено={} из={}",
+                    gameId, eventType, sent, channels.size());
+
+            if (sent == 0) {
+                log.warn("broadcast gameId={} eventType={} — никто не получил (каналов={})",
+                        gameId, eventType, channels.size());
             }
 
         } catch (Exception e) {
-            log.error("Ошибка при рассылке события {}", eventType, e);
+            log.error("Ошибка при рассылке события {} для игры {}", eventType, gameId, e);
         }
     }
 }

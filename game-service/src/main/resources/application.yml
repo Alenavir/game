@@ -24,6 +24,12 @@ spring:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
 
+player:
+  service:
+    grpc:
+      host: ${PLAYER_SERVICE_GRPC_HOST:localhost}
+      port: ${PLAYER_SERVICE_GRPC_PORT:9091}
+
 grpc:
   server:
     port: 9090

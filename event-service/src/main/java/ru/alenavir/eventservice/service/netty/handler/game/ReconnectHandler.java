@@ -22,16 +22,14 @@ import java.util.concurrent.ExecutorService;
 public class ReconnectHandler extends BaseCommandHandler {
 
     private final EventGrpcClient client;
-    private final NettyServer nettyServer;
 
     public ReconnectHandler(ObjectMapper objectMapper,
                             Validator validator,
+                            NettyServer nettyServer,
                             @Qualifier("nettyBusinessExecutor") ExecutorService nettyBusinessExecutor,
-                            EventGrpcClient client,
-                            NettyServer nettyServer) {
-        super(objectMapper, validator, nettyBusinessExecutor);
+                            EventGrpcClient client) {
+        super(objectMapper, validator, nettyServer, nettyBusinessExecutor);
         this.client = client;
-        this.nettyServer = nettyServer;
     }
 
     @Override
@@ -64,6 +62,8 @@ public class ReconnectHandler extends BaseCommandHandler {
                 sendError(ctx, "Player is not in this game");
                 return;
             }
+
+            onGameJoined(ctx, cmd.gameId().toString(), cmd.playerId()); // ← централизованно
 
             log.info("Игрок {} переподключился к игре {}", cmd.playerId(), cmd.gameId());
 

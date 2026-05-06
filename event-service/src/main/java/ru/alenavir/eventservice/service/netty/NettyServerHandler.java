@@ -31,8 +31,6 @@ public class NettyServerHandler extends SimpleChannelInboundHandler<String> {
     private final EventGrpcClient grpcClient;
     private final ScheduledExecutorService scheduler;
 
-    private ScheduledFuture<?> disconnectTask;
-
     public NettyServerHandler(NettyServer nettyServer,
                               ObjectMapper objectMapper,
                               CommandDispatcher dispatcher,
@@ -60,16 +58,13 @@ public class NettyServerHandler extends SimpleChannelInboundHandler<String> {
             JsonNode payload = node.get("payload");
 
             if (payload.has("gameId") && ctx.channel().attr(ChannelAttributes.GAME_ID).get() == null) {
-                String gameId = payload.get("gameId").asText();
-                ctx.channel().attr(ChannelAttributes.GAME_ID).set(gameId);
-                nettyServer.addChannel(gameId, ctx.channel());
+                ctx.channel().attr(ChannelAttributes.GAME_ID).set(payload.get("gameId").asText());
             }
 
             if (payload.has("playerId") && ctx.channel().attr(ChannelAttributes.PLAYER_ID).get() == null) {
                 ctx.channel().attr(ChannelAttributes.PLAYER_ID).set(payload.get("playerId").asLong());
             }
 
-            // при реконнекте отмена таймер через NettyServer по playerId
             if ("RECONNECT".equals(commandType) && payload.has("playerId")) {
                 nettyServer.cancelDisconnect(payload.get("playerId").asLong());
             }
@@ -112,7 +107,7 @@ public class NettyServerHandler extends SimpleChannelInboundHandler<String> {
             } catch (Exception e) {
                 log.error("Ошибка при удалении отключившегося игрока {}", playerId, e);
             } finally {
-                nettyServer.cancelDisconnect(playerId); // чистка map после выполнения
+                nettyServer.removeDisconnectTask(playerId); // тихая чистка
             }
         }, 30, TimeUnit.SECONDS);
 

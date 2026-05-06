@@ -46,10 +46,13 @@ public class NettyServer {
 
     public void cancelDisconnect(Long playerId) {
         ScheduledFuture<?> task = disconnectTasks.remove(playerId);
-        if (task != null) {
-            task.cancel(false);
+        if (task != null && task.cancel(false)) {
             log.info("Таймер реконнекта для игрока {} отменён", playerId);
         }
+    }
+
+    public void removeDisconnectTask(Long playerId) {
+        disconnectTasks.remove(playerId);
     }
 
     public void broadcastToGame(String gameId, Object payload, String eventType, Channel exclude) {

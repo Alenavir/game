@@ -21,16 +21,14 @@ import java.util.concurrent.ExecutorService;
 public class PlayerLeaveHandler extends BaseCommandHandler {
 
     private final EventGrpcClient client;
-    private final NettyServer nettyServer;
 
     public PlayerLeaveHandler(ObjectMapper objectMapper,
                               Validator validator,
+                              NettyServer nettyServer,
                               @Qualifier("nettyBusinessExecutor") ExecutorService nettyBusinessExecutor,
-                              EventGrpcClient client,
-                              NettyServer nettyServer) {
-        super(objectMapper, validator, nettyBusinessExecutor);
+                              EventGrpcClient client) {
+        super(objectMapper, validator, nettyServer, nettyBusinessExecutor);
         this.client = client;
-        this.nettyServer = nettyServer;
     }
 
     @Override
@@ -59,10 +57,9 @@ public class PlayerLeaveHandler extends BaseCommandHandler {
             client.leaveGame(cmd.playerId(), cmd.gameId());
 
             ctx.channel().attr(ChannelAttributes.LEFT_GRACEFULLY).set(true);
+            nettyServer.removeChannel(cmd.gameId().toString(), ctx.channel());
 
             log.info("Игрок {} вышел из игры {}", cmd.playerId(), cmd.gameId());
-
-            nettyServer.removeChannel(cmd.gameId().toString(), ctx.channel());
 
             ObjectNode payloadNode = objectMapper.createObjectNode();
             payloadNode.put("gameId", cmd.gameId());

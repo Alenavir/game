@@ -5,12 +5,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.netty.channel.ChannelHandlerContext;
 import jakarta.validation.Validator;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import ru.alenavir.eventservice.dto.PlayerDto;
 import ru.alenavir.eventservice.grpc.EventGrpcClient;
+import ru.alenavir.eventservice.service.netty.NettyServer;
 import ru.alenavir.eventservice.service.netty.handler.BaseCommandHandler;
 
 import java.util.concurrent.ExecutorService;
@@ -24,9 +24,10 @@ public class PlayerCreateHandler extends BaseCommandHandler {
 
     public PlayerCreateHandler(ObjectMapper objectMapper,
                                Validator validator,
+                               NettyServer nettyServer,
                                @Qualifier("nettyBusinessExecutor") ExecutorService nettyBusinessExecutor,
                                EventGrpcClient client) {
-        super(objectMapper, validator, nettyBusinessExecutor);
+        super(objectMapper, validator, nettyServer, nettyBusinessExecutor);
         this.client = client;
     }
 
@@ -64,7 +65,6 @@ public class PlayerCreateHandler extends BaseCommandHandler {
             ObjectNode wrapper = objectMapper.createObjectNode();
             wrapper.put("type", "PLAYER_CREATED_RESPONSE");
             wrapper.set("payload", payloadNode);
-
             ctx.writeAndFlush(wrapper + "\n");
         });
     }

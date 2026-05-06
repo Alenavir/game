@@ -21,16 +21,14 @@ import java.util.concurrent.ExecutorService;
 public class PlayerJoinHandler extends BaseCommandHandler {
 
     private final EventGrpcClient client;
-    private final NettyServer nettyServer;
 
     public PlayerJoinHandler(ObjectMapper objectMapper,
                              Validator validator,
+                             NettyServer nettyServer,
                              @Qualifier("nettyBusinessExecutor") ExecutorService nettyBusinessExecutor,
-                             EventGrpcClient client,
-                             NettyServer nettyServer) {
-        super(objectMapper, validator, nettyBusinessExecutor);
+                             EventGrpcClient client) {
+        super(objectMapper, validator, nettyServer, nettyBusinessExecutor);
         this.client = client;
-        this.nettyServer = nettyServer;
     }
 
     @Override
@@ -62,6 +60,8 @@ public class PlayerJoinHandler extends BaseCommandHandler {
                 sendError(ctx, e.getStatus().getDescription());
                 return;
             }
+
+            onGameJoined(ctx, cmd.gameId().toString(), cmd.playerId()); // ← централизованно
 
             log.info("Игрок {} присоединился к игре {}", cmd.playerId(), cmd.gameId());
 

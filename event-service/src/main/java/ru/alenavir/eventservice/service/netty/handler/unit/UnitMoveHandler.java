@@ -4,9 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.netty.channel.ChannelHandlerContext;
-import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
@@ -14,10 +12,8 @@ import ru.alenavir.eventservice.dto.UnitDto;
 import ru.alenavir.eventservice.grpc.EventGrpcClient;
 import ru.alenavir.eventservice.service.netty.NettyServer;
 import ru.alenavir.eventservice.service.netty.handler.BaseCommandHandler;
-import ru.alenavir.eventservice.service.netty.handler.CommandHandler;
 import ru.alenavir.eventservice.service.netty.handler.unit.command.UnitMoveCommand;
 
-import java.util.Set;
 import java.util.concurrent.ExecutorService;
 
 /**
@@ -28,16 +24,14 @@ import java.util.concurrent.ExecutorService;
 public class UnitMoveHandler extends BaseCommandHandler {
 
     private final EventGrpcClient client;
-    private final NettyServer nettyServer;
 
     public UnitMoveHandler(ObjectMapper objectMapper,
                            Validator validator,
+                           NettyServer nettyServer,
                            @Qualifier("nettyBusinessExecutor") ExecutorService nettyBusinessExecutor,
-                           EventGrpcClient client,
-                           NettyServer nettyServer) {
-        super(objectMapper, validator, nettyBusinessExecutor);
+                           EventGrpcClient client) {
+        super(objectMapper, validator, nettyServer, nettyBusinessExecutor);
         this.client = client;
-        this.nettyServer = nettyServer;
     }
 
     @Override

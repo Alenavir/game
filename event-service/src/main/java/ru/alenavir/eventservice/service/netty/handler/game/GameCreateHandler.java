@@ -10,7 +10,6 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import ru.alenavir.eventservice.dto.GameDto;
 import ru.alenavir.eventservice.grpc.EventGrpcClient;
-import ru.alenavir.eventservice.service.netty.ChannelAttributes;
 import ru.alenavir.eventservice.service.netty.NettyServer;
 import ru.alenavir.eventservice.service.netty.handler.BaseCommandHandler;
 import ru.alenavir.eventservice.service.netty.handler.game.command.CreateGameCommand;
@@ -22,16 +21,14 @@ import java.util.concurrent.ExecutorService;
 public class GameCreateHandler extends BaseCommandHandler {
 
     private final EventGrpcClient client;
-    private final NettyServer nettyServer;
 
     public GameCreateHandler(ObjectMapper objectMapper,
                              Validator validator,
+                             NettyServer nettyServer,
                              @Qualifier("nettyBusinessExecutor") ExecutorService nettyBusinessExecutor,
-                             EventGrpcClient client,
-                             NettyServer nettyServer) {
-        super(objectMapper, validator, nettyBusinessExecutor);
+                             EventGrpcClient client) {
+        super(objectMapper, validator, nettyServer, nettyBusinessExecutor);
         this.client = client;
-        this.nettyServer = nettyServer;
     }
 
     @Override
@@ -59,8 +56,7 @@ public class GameCreateHandler extends BaseCommandHandler {
         executeAsync(ctx, () -> {
             GameDto response = client.createGame(cmd.playerId());
 
-            ctx.channel().attr(ChannelAttributes.GAME_ID).set(response.id().toString());
-            nettyServer.addChannel(response.id().toString(), ctx.channel());
+            onGameJoined(ctx, response.id().toString(), cmd.playerId()); // ← централизованно
 
             log.info("Игра с id={} создана игроком {}", response.id(), cmd.playerId());
 

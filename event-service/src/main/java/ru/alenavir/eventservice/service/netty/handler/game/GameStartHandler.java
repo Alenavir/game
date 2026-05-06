@@ -21,16 +21,14 @@ import java.util.concurrent.ExecutorService;
 public class GameStartHandler extends BaseCommandHandler {
 
     private final EventGrpcClient client;
-    private final NettyServer nettyServer;
 
     public GameStartHandler(ObjectMapper objectMapper,
                             Validator validator,
+                            NettyServer nettyServer,
                             @Qualifier("nettyBusinessExecutor") ExecutorService nettyBusinessExecutor,
-                            EventGrpcClient client,
-                            NettyServer nettyServer) {
-        super(objectMapper, validator, nettyBusinessExecutor);
+                            EventGrpcClient client) {
+        super(objectMapper, validator, nettyServer, nettyBusinessExecutor);
         this.client = client;
-        this.nettyServer = nettyServer;
     }
 
     @Override
